@@ -2,9 +2,12 @@ package hn
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 )
+
+const maxCount = 10
 
 var hnUrlBase = "https://hacker-news.firebaseio.com/v0/%s.json"
 
@@ -17,33 +20,40 @@ type Story struct {
 	Url   string
 }
 
-func GetLatest() string {
+func makeError(message string) error {
+	return errors.New(message)
+}
+
+func GetLatest() ([]*Story, error) {
 	var items []int
+	stories := make([]*Story, 0)
 	url := fmt.Sprintf(hnUrlBase, "newstories")
-	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
-		return "error"
+		return nil, makeError("Error fetching the news")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return resp.Status + "Error"
+		return nil, makeError("Error fetching the news")
 	}
 	err = json.NewDecoder(resp.Body).Decode(&items)
 	if err != nil {
-		fmt.Println(err)
-		return "JSON Parse Error"
+		return nil, makeError("JSON parse error")
 	}
-	fmt.Println(items)
-	items = items[:11]
 	for i := range items {
 		story := new(Story)
 		url = fmt.Sprintf(hnItemBase, items[i])
 		resp, err = http.Get(url)
-		// TODO : Error Handling
-		err = json.NewDecoder(resp.Body).Decode(story)
-		fmt.Println(story)
+		if err == nil {
+			err = json.NewDecoder(resp.Body).Decode(story)
+			if err == nil {
+				stories = append(stories, story)
+			}
+		}
+		if len(stories) > maxCount {
+			break
+		}
 	}
-	return "Done"
+	return stories, nil
 
 }
