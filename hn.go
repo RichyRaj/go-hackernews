@@ -7,11 +7,12 @@ import (
 	"net/http"
 )
 
-const maxCount = 10
+// Number of stories to display
+const maxStoriesCount = 10
 
-var hnUrlBase = "https://hacker-news.firebaseio.com/v0/%s.json"
+const hnUrlBase = "https://hacker-news.firebaseio.com/v0/%s.json"
 
-var hnItemBase = "https://hacker-news.firebaseio.com/v0/item/%d.json"
+const hnItemBase = "https://hacker-news.firebaseio.com/v0/item/%d.json"
 
 type Story struct {
 	Title string
@@ -28,6 +29,10 @@ func GetLatest() ([]*Story, error) {
 	var items []int
 	stories := make([]*Story, 0)
 	url := fmt.Sprintf(hnUrlBase, "newstories")
+
+	// To fetch details of a story, we will first need its id
+	// Hitting the newest stories end point will return an array
+	// of ids
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, makeError("Error fetching the news")
@@ -40,6 +45,8 @@ func GetLatest() ([]*Story, error) {
 	if err != nil {
 		return nil, makeError("JSON parse error")
 	}
+
+	// Fetch stories using the ids obtained
 	for i := range items {
 		story := new(Story)
 		url = fmt.Sprintf(hnItemBase, items[i])
@@ -50,7 +57,7 @@ func GetLatest() ([]*Story, error) {
 				stories = append(stories, story)
 			}
 		}
-		if len(stories) > maxCount {
+		if len(stories) > maxStoriesCount {
 			break
 		}
 	}
